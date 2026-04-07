@@ -107,3 +107,45 @@ def build_term_explanations(features: dict) -> list[str]:
         result.append("这段代码里暂时没有识别到特别典型的术语，先按变量、函数、判断语句的顺序看就可以。")
 
     return result
+
+
+def build_modify_hints(features: dict, scene: str) -> list[str]:
+    variables = features.get("variables", [])
+    functions = features.get("functions", [])
+    joined = " ".join([item.lower() for item in variables + functions])
+    hints = []
+
+    if "页面显示" in scene:
+        hints.append("如果你想改显示内容，第一眼先看页面函数本身，再看里面调用的 SEG_SetCode / SEG_SetDigit。")
+        if functions:
+            hints.append("优先关注这些函数：" + "、".join(functions[:4]) + "。")
+        if variables:
+            hints.append("优先关注这些变量：" + "、".join(variables[:4]) + "。")
+
+    elif "按键处理" in scene:
+        hints.append("如果你想改按键功能，第一眼先看按键处理函数里的 if / switch 分支，不要先改底层驱动。")
+        if functions:
+            hints.append("优先关注这些函数：" + "、".join(functions[:4]) + "。")
+        if any("key" in item.lower() for item in variables):
+            hints.append("优先检查按键值变量和页面状态变量是不是配合使用。")
+
+    elif "参数设置" in scene:
+        hints.append("如果你想改参数，先看参数结构体，再看按键里加减逻辑，最后看页面显示有没有同步。")
+        if variables:
+            hints.append("优先关注这些变量：" + "、".join(variables[:5]) + "。")
+
+    elif "报警或输出控制" in scene:
+        hints.append("如果你想改 LED、继电器或蜂鸣器，先看报警状态变量，再看输出控制函数。")
+        if "alarm" in joined:
+            hints.append("先确认报警状态是在哪里被置位的，再看它最后是如何驱动输出的。")
+
+    elif "数据采样或数据处理" in scene:
+        hints.append("如果你想改温度、ADC、频率、距离，先看数据变量，再看这段代码是在哪里更新这些变量的。")
+        if variables:
+            hints.append("优先关注这些变量：" + "、".join(variables[:5]) + "。")
+
+    else:
+        hints.append("先看变量名和函数名，判断它是页面、按键、参数、采样还是输出控制，再决定往哪里改。")
+
+    hints.append("最稳的改法永远是：一次只改一个点，改完立刻重新编译。")
+    return hints

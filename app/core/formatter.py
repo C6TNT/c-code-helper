@@ -6,12 +6,14 @@ def format_result(
     steps: list[str],
     explanation: str,
     term_explanations: list[str],
+    modify_hints: list[str],
 ) -> dict:
     return {
         "scene": scene,
         "requirement_text": requirement_text,
         "summary_text": "\n".join(f"- {item}" for item in syntax_summary),
         "term_text": "\n".join(f"- {item}" for item in term_explanations),
+        "modify_hint_text": "\n".join(f"- {item}" for item in modify_hints),
         "reading_steps_text": "\n".join(f"{idx + 1}. {item}" for idx, item in enumerate(steps)),
         "explanation_text": explanation,
         "feature_text": (

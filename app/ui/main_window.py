@@ -159,21 +159,25 @@ class MainWindow(QMainWindow):
         row_top = QHBoxLayout()
         row_bottom = QHBoxLayout()
         row_bottom2 = QHBoxLayout()
+        row_bottom3 = QHBoxLayout()
         right_layout.addLayout(row_top)
         right_layout.addLayout(row_bottom)
         right_layout.addLayout(row_bottom2)
+        right_layout.addLayout(row_bottom3)
 
         self.syntax_card = self._make_card("这段代码用了什么语法")
         self.feature_card = self._make_card("这段代码里识别到了什么")
         self.steps_card = self._make_card("建议按什么顺序看")
         self.explain_card = self._make_card("这段代码大概在做什么")
         self.term_card = self._make_card("这段代码里的术语怎么理解")
+        self.modify_card = self._make_card("如果你要改这段代码，先看哪里")
 
         row_top.addLayout(self.syntax_card["layout"])
         row_top.addLayout(self.feature_card["layout"])
         row_bottom.addLayout(self.steps_card["layout"])
         row_bottom.addLayout(self.explain_card["layout"])
         row_bottom2.addLayout(self.term_card["layout"])
+        row_bottom3.addLayout(self.modify_card["layout"])
 
         self.copy_button = QPushButton("复制讲解结果")
         self.copy_button.setStyleSheet(
@@ -219,12 +223,14 @@ class MainWindow(QMainWindow):
         self.steps_card["box"].setPlainText(result["reading_steps_text"])
         self.explain_card["box"].setPlainText(result["explanation_text"])
         self.term_card["box"].setPlainText(result["term_text"])
+        self.modify_card["box"].setPlainText(result["modify_hint_text"])
 
         self._last_result = (
             f"代码归类：{result['scene']}\n\n"
             f"这段代码更像对应哪类赛题要求：\n{result['requirement_text']}\n\n"
             f"这段代码用了什么语法：\n{result['summary_text']}\n\n"
             f"这段代码里的术语怎么理解：\n{result['term_text']}\n\n"
+            f"如果你要改这段代码，先看哪里：\n{result['modify_hint_text']}\n\n"
             f"这段代码里识别到了什么：\n{result['feature_text']}\n\n"
             f"建议按什么顺序看：\n{result['reading_steps_text']}\n\n"
             f"这段代码大概在做什么：\n{result['explanation_text']}"
@@ -239,6 +245,7 @@ class MainWindow(QMainWindow):
         self.steps_card["box"].clear()
         self.explain_card["box"].clear()
         self.term_card["box"].clear()
+        self.modify_card["box"].clear()
         self._last_result = ""
 
     def handle_copy(self) -> None:
