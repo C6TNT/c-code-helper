@@ -1,4 +1,4 @@
-from app.core.classifier import classify_code_scene
+from app.core.classifier import classify_code_scene, map_scene_to_requirement
 from app.core.explainer import (
     build_code_explanation,
     build_reading_steps,
@@ -15,8 +15,9 @@ def analyze_code(code_text: str) -> dict:
 
     features = parse_code_features(code_text)
     scene = classify_code_scene(features)
+    requirement_text = map_scene_to_requirement(scene)
     syntax_summary = build_syntax_summary(features)
     term_explanations = build_term_explanations(features)
     steps = build_reading_steps(features)
     explanation = build_code_explanation(features, scene)
-    return format_result(features, scene, syntax_summary, steps, explanation, term_explanations)
+    return format_result(features, scene, requirement_text, syntax_summary, steps, explanation, term_explanations)

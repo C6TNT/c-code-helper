@@ -148,6 +148,14 @@ class MainWindow(QMainWindow):
         )
         right_layout.addWidget(self.scene_card)
 
+        self.requirement_card = QTextEdit()
+        self.requirement_card.setReadOnly(True)
+        self.requirement_card.setMaximumHeight(110)
+        self.requirement_card.setStyleSheet(
+            "QTextEdit {background:#eef9f1; color:#22543d; border:2px solid #b9e5c7; border-radius:14px; font-size:16px; padding:10px;}"
+        )
+        right_layout.addWidget(self.requirement_card)
+
         row_top = QHBoxLayout()
         row_bottom = QHBoxLayout()
         row_bottom2 = QHBoxLayout()
@@ -205,6 +213,7 @@ class MainWindow(QMainWindow):
             return
 
         self.scene_card.setPlainText(result["scene"])
+        self.requirement_card.setPlainText(result["requirement_text"])
         self.syntax_card["box"].setPlainText(result["summary_text"])
         self.feature_card["box"].setPlainText(result["feature_text"])
         self.steps_card["box"].setPlainText(result["reading_steps_text"])
@@ -213,6 +222,7 @@ class MainWindow(QMainWindow):
 
         self._last_result = (
             f"代码归类：{result['scene']}\n\n"
+            f"这段代码更像对应哪类赛题要求：\n{result['requirement_text']}\n\n"
             f"这段代码用了什么语法：\n{result['summary_text']}\n\n"
             f"这段代码里的术语怎么理解：\n{result['term_text']}\n\n"
             f"这段代码里识别到了什么：\n{result['feature_text']}\n\n"
@@ -223,6 +233,7 @@ class MainWindow(QMainWindow):
     def handle_clear(self) -> None:
         self.code_input.clear()
         self.scene_card.clear()
+        self.requirement_card.clear()
         self.syntax_card["box"].clear()
         self.feature_card["box"].clear()
         self.steps_card["box"].clear()
