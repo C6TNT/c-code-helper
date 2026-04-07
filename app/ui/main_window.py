@@ -1,8 +1,8 @@
 import sys
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -16,11 +16,66 @@ from PySide6.QtWidgets import (
 from app.core.engine import analyze_code
 
 
+SAMPLE_SNIPPETS = {
+    "页面显示函数": """void App_ShowDataPage(void)
+{
+    SEG_Clear();
+    SEG_SetCode(0, SEG_C);
+    SEG_SetDigit(1, g_data.temp10 / 10);
+    SEG_SetDigitDp(2, g_data.temp10 % 10);
+    SEG_SetDigit(6, g_data.adc_value / 100);
+    SEG_SetDigit(7, (g_data.adc_value / 10) % 10);
+}""",
+    "按键处理函数": """void App_HandleKey(void)
+{
+    u8 key;
+    key = Key_GetEvent();
+    if(key == 1)
+    {
+        g_page++;
+        if(g_page > PAGE_RECORD)
+        {
+            g_page = PAGE_DATA;
+        }
+    }
+}""",
+    "参数结构体": """typedef struct
+{
+    int temp_limit_x10;
+    u16 dist_limit;
+    u8 adc_limit;
+} app_param_t;
+
+static app_param_t g_param = {300, 30, 200};""",
+    "报警判断逻辑": """void App_UpdateAlarm(void)
+{
+    g_alarm = 0;
+    if(g_data.temp10 > g_param.temp_limit_x10)
+    {
+        g_alarm = 1;
+    }
+    if(g_data.distance_cm < g_param.dist_limit)
+    {
+        g_alarm = 1;
+    }
+}""",
+    "状态枚举": """typedef enum
+{
+    PAGE_DATA = 0,
+    PAGE_PARAM,
+    PAGE_TIME,
+    PAGE_FREQ,
+    PAGE_RECORD
+} app_page_t;""",
+}
+
+
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("C 语言代码理解助手")
-        self.resize(1380, 860)
+        self.resize(1420, 900)
+        self._last_result = ""
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -42,8 +97,29 @@ class MainWindow(QMainWindow):
         hint.setStyleSheet("font-size: 15px; color: #335b82;")
         left_layout.addWidget(hint)
 
+        sample_title = QLabel("内置示例")
+        sample_title.setStyleSheet("font-size: 18px; font-weight: 700; color: #123b66;")
+        left_layout.addWidget(sample_title)
+
+        sample_row = QHBoxLayout()
+        self.sample_combo = QComboBox()
+        self.sample_combo.addItems(SAMPLE_SNIPPETS.keys())
+        self.sample_combo.setStyleSheet(
+            "QComboBox {background:#ffffff; color:#1d2b38; border:2px solid #d8e6f4; border-radius:12px; font-size:15px; padding:8px;}"
+        )
+        self.load_sample_button = QPushButton("载入示例")
+        self.load_sample_button.setStyleSheet(
+            "QPushButton {background:#2f80ed; color:white; font-size:15px; font-weight:700; border:none; border-radius:12px; padding:12px 16px;}"
+            "QPushButton:hover {background:#276fd0;}"
+        )
+        sample_row.addWidget(self.sample_combo, 1)
+        sample_row.addWidget(self.load_sample_button)
+        left_layout.addLayout(sample_row)
+
         self.code_input = QTextEdit()
-        self.code_input.setPlaceholderText("例如：粘贴 app.c 里某个页面函数、按键函数、参数结构体或判断逻辑。")
+        self.code_input.setPlaceholderText(
+            "例如：粘贴 app.c 里的某个页面函数、按键函数、参数结构体或判断逻辑。"
+        )
         self.code_input.setStyleSheet(
             "QTextEdit {background:#ffffff; color:#1d2b38; border:2px solid #d8e6f4; border-radius:14px; font-size:16px; padding:10px;}"
         )
@@ -94,11 +170,10 @@ class MainWindow(QMainWindow):
         )
         right_layout.addWidget(self.copy_button)
 
+        self.load_sample_button.clicked.connect(self.handle_load_sample)
         self.analyze_button.clicked.connect(self.handle_analyze)
         self.clear_button.clicked.connect(self.handle_clear)
         self.copy_button.clicked.connect(self.handle_copy)
-
-        self._last_result = ""
 
     def _make_card(self, title: str) -> dict:
         layout = QVBoxLayout()
@@ -113,6 +188,10 @@ class MainWindow(QMainWindow):
         layout.addWidget(label)
         layout.addWidget(box)
         return {"layout": layout, "box": box}
+
+    def handle_load_sample(self) -> None:
+        sample_name = self.sample_combo.currentText()
+        self.code_input.setPlainText(SAMPLE_SNIPPETS.get(sample_name, ""))
 
     def handle_analyze(self) -> None:
         try:
