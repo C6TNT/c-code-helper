@@ -69,3 +69,41 @@ def build_code_explanation(features: dict, scene: str) -> str:
     parts.append("建议先不要逐行死抠，而是先分清这段代码属于页面、按键、参数、采样还是输出控制。")
     return "\n".join(parts)
 
+
+def build_term_explanations(features: dict) -> list[str]:
+    keys = set(features.get("keywords", []))
+    variables = [item.lower() for item in features.get("variables", [])]
+    functions = [item.lower() for item in features.get("functions", [])]
+    joined = " ".join(variables + functions)
+    result = []
+
+    if "static" in keys:
+        result.append("static：通常表示这个变量或函数只在当前文件内使用，或者需要把上一次的值保留下来。")
+
+    if "typedef" in keys and "struct" in keys:
+        result.append("typedef struct：通常是在定义一个“数据包”，方便把一组相关变量放在一起。")
+    elif "struct" in keys:
+        result.append("struct：通常是在把多个相关变量打包成一个整体。")
+
+    if "enum" in keys:
+        result.append("enum：通常是在定义页面编号、状态编号或模式编号，让代码比直接写数字更清楚。")
+
+    if any(token in joined for token in ("u8", "u16", "u32")):
+        result.append("u8 / u16 / u32：是单片机里常见的整型别名，分别可以理解成 8 位、16 位、32 位无符号整数。")
+
+    if any(token in joined for token in ("bit",)):
+        result.append("bit：是 51 单片机里常见的位变量，通常只用来表示开关状态。")
+
+    if "array" in keys:
+        result.append("数组：通常是在保存一组显示数据、历史数据或缓冲区内容。")
+
+    if "if" in keys:
+        result.append("if：通常是在做条件判断，比如判断按键、页面、报警条件或阈值。")
+
+    if "switch" in keys:
+        result.append("switch：通常是在做多页面切换、多模式切换或多按键分发。")
+
+    if not result:
+        result.append("这段代码里暂时没有识别到特别典型的术语，先按变量、函数、判断语句的顺序看就可以。")
+
+    return result

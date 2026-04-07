@@ -1,7 +1,15 @@
-def format_result(features: dict, scene: str, syntax_summary: list[str], steps: list[str], explanation: str) -> dict:
+def format_result(
+    features: dict,
+    scene: str,
+    syntax_summary: list[str],
+    steps: list[str],
+    explanation: str,
+    term_explanations: list[str],
+) -> dict:
     return {
         "scene": scene,
         "summary_text": "\n".join(f"- {item}" for item in syntax_summary),
+        "term_text": "\n".join(f"- {item}" for item in term_explanations),
         "reading_steps_text": "\n".join(f"{idx + 1}. {item}" for idx, item in enumerate(steps)),
         "explanation_text": explanation,
         "feature_text": (
@@ -11,4 +19,3 @@ def format_result(features: dict, scene: str, syntax_summary: list[str], steps: 
             f"识别到的语法：{', '.join(features.get('keywords', [])) or '未明显识别到'}"
         ),
     }
-
