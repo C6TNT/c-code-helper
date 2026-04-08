@@ -3,6 +3,7 @@ from app.core.explainer import (
     build_code_explanation,
     build_modify_hints,
     build_reading_steps,
+    build_specific_actions,
     build_syntax_summary,
     build_term_explanations,
 )
@@ -20,6 +21,7 @@ def analyze_code(code_text: str) -> dict:
     syntax_summary = build_syntax_summary(features)
     term_explanations = build_term_explanations(features)
     modify_hints = build_modify_hints(features, scene)
+    specific_actions = build_specific_actions(features)
     steps = build_reading_steps(features)
     explanation = build_code_explanation(features, scene)
     return format_result(
@@ -31,4 +33,5 @@ def analyze_code(code_text: str) -> dict:
         explanation,
         term_explanations,
         modify_hints,
+        specific_actions,
     )

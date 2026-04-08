@@ -167,6 +167,7 @@ class MainWindow(QMainWindow):
 
         self.syntax_card = self._make_card("这段代码用了什么语法")
         self.feature_card = self._make_card("这段代码里识别到了什么")
+        self.action_card = self._make_card("这段代码具体做了哪些动作")
         self.steps_card = self._make_card("建议按什么顺序看")
         self.explain_card = self._make_card("这段代码大概在做什么")
         self.term_card = self._make_card("这段代码里的术语怎么理解")
@@ -176,6 +177,7 @@ class MainWindow(QMainWindow):
         row_top.addLayout(self.feature_card["layout"])
         row_bottom.addLayout(self.steps_card["layout"])
         row_bottom.addLayout(self.explain_card["layout"])
+        row_bottom2.addLayout(self.action_card["layout"])
         row_bottom2.addLayout(self.term_card["layout"])
         row_bottom3.addLayout(self.modify_card["layout"])
 
@@ -220,6 +222,7 @@ class MainWindow(QMainWindow):
         self.requirement_card.setPlainText(result["requirement_text"])
         self.syntax_card["box"].setPlainText(result["summary_text"])
         self.feature_card["box"].setPlainText(result["feature_text"])
+        self.action_card["box"].setPlainText(result["action_text"])
         self.steps_card["box"].setPlainText(result["reading_steps_text"])
         self.explain_card["box"].setPlainText(result["explanation_text"])
         self.term_card["box"].setPlainText(result["term_text"])
@@ -232,6 +235,7 @@ class MainWindow(QMainWindow):
             f"这段代码里的术语怎么理解：\n{result['term_text']}\n\n"
             f"如果你要改这段代码，先看哪里：\n{result['modify_hint_text']}\n\n"
             f"这段代码里识别到了什么：\n{result['feature_text']}\n\n"
+            f"这段代码具体做了哪些动作：\n{result['action_text']}\n\n"
             f"建议按什么顺序看：\n{result['reading_steps_text']}\n\n"
             f"这段代码大概在做什么：\n{result['explanation_text']}"
         )
@@ -242,6 +246,7 @@ class MainWindow(QMainWindow):
         self.requirement_card.clear()
         self.syntax_card["box"].clear()
         self.feature_card["box"].clear()
+        self.action_card["box"].clear()
         self.steps_card["box"].clear()
         self.explain_card["box"].clear()
         self.term_card["box"].clear()
