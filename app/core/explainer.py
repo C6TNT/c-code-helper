@@ -94,7 +94,7 @@ def build_code_explanation(features: dict, scene: str) -> str:
         parts.append("它更像时间读取或时间显示准备逻辑：重点通常是读出的时分秒最后如何拆位、显示或参与控制。")
 
     if assignments:
-        parts.append(f"这段代码里真正被改动的关键变量有：{_join_items(assignments, 5)}。这比只看调用名更能说明它到底在改什么。")
+        parts.append(f"这段代码里真正被修改的关键变量有：{_join_items(assignments, 5)}。这比只看调用名更能说明它到底在改什么。")
 
     if calls:
         parts.append(f"这段代码里最关键的调用有：{_join_items(calls, 5)}。先盯住这些调用前后的变量变化，通常最容易看懂。")
@@ -235,6 +235,66 @@ def build_dependency_hints(features: dict) -> list[str]:
     return hints
 
 
+def build_related_function_hints(features: dict, scene: str) -> list[str]:
+    tags = set(features.get("semantic_tags", []))
+    calls = list(features.get("calls", []))
+    functions = list(features.get("functions", []))
+    related = []
+
+    def add_items(items: list[str]) -> None:
+        for item in items:
+            if item and item not in related:
+                related.append(item)
+
+    add_items(functions[:3])
+    add_items(calls[:5])
+
+    if "display_output" in tags:
+        add_items(["App_UpdateDisplay", "SEG_SetCode", "SEG_SetDigit", "SEG_SetDigitDp"])
+    if "key_handle" in tags or "key_read" in tags:
+        add_items(["App_HandleKey", "Key_GetEvent", "Key_GetShortEvent", "Key_GetLongEvent"])
+    if "page_switch" in tags:
+        add_items(["App_HandleKey", "App_UpdateDisplay"])
+    if "param_save" in tags:
+        add_items(["App_SaveParam", "App_LoadParam", "App_HandleKey"])
+    if "param_load" in tags:
+        add_items(["App_LoadParam", "App_SaveParam", "App_Init"])
+    if "param_edit" in tags:
+        add_items(["App_HandleKey", "App_UpdateDisplay", "App_SaveParam"])
+    if "temp_sample" in tags:
+        add_items(["DS18B20_ReadTemp", "App_UpdateSampleData", "App_UpdateAlarm"])
+    if "adc_sample" in tags:
+        add_items(["PCF8591_ReadADC", "App_UpdateSampleData", "App_ShowDataPage"])
+    if "freq_sample" in tags:
+        add_items(["FREQ_ReadHz_250ms", "App_UpdateSampleData", "App_ShowFreqPage"])
+    if "distance_sample" in tags:
+        add_items(["Ultrasonic_ReadDistance", "App_UpdateSampleData", "App_UpdateAlarm"])
+    if "rtc_sample" in tags:
+        add_items(["DS1302_ReadTime", "App_ShowTimePage", "App_Init"])
+    if "alarm_output" in tags:
+        add_items(["App_UpdateAlarm", "LED_Set", "Relay_Set", "Beep_Set"])
+    if "eeprom_write" in tags or "eeprom_read" in tags:
+        add_items(["AT24C02_WriteByte", "AT24C02_ReadByte", "App_SaveParam", "App_LoadParam"])
+
+    if not related:
+        return [f"从当前特征看，这段代码最值得顺着当前函数本身和它直接调用的函数往下追。当前归类是：{scene}。"]
+
+    hints = [
+        f"和这段代码最相关的模板函数，优先建议你顺着这些名字往下看：{_join_items(related, 8)}。"
+    ]
+
+    if "显示" in scene:
+        hints.append("这类代码通常不是单独存在的，往前看数据是怎么准备的，往后看数码管接口是怎么落到具体位上的。")
+    elif "按键" in scene:
+        hints.append("这类代码通常会把键值分发到页面切换、参数修改或模式切换，所以别只盯当前分支，顺着目标状态变量继续看。")
+    elif "参数" in scene:
+        hints.append("参数相关代码通常和“显示参数”“保存参数”“加载参数”是联动的，建议三处一起串起来看。")
+    elif "采样" in scene or "数据处理" in scene:
+        hints.append("采样代码通常要和后面的显示页、报警判断或输出控制配合起来看，不然只看接口调用会觉得很空。")
+
+    return hints
+
+
 def build_impact_hints(features: dict, scene: str) -> list[str]:
     tags = set(features.get("semantic_tags", []))
     impacts = []
@@ -260,7 +320,7 @@ def build_impact_hints(features: dict, scene: str) -> list[str]:
         elif "按键处理" in scene:
             impacts.append("改这里大概率会影响页面切换、模式切换或按键功能分发。")
         else:
-            impacts.append("改这里大概率会影响和它共享变量的其他代码段，所以改完要回头检查调用链。")
+            impacts.append("改这里大概率会影响和它共用变量的其他代码段，所以改完要回头检查调用链。")
 
     return impacts
 

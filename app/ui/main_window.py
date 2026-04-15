@@ -73,7 +73,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("C 语言代码理解助手")
-        self.resize(1500, 920)
+        self.resize(1560, 980)
         self._last_result = ""
         self._build_ui()
 
@@ -148,15 +148,18 @@ class MainWindow(QMainWindow):
         row2 = QHBoxLayout()
         row3 = QHBoxLayout()
         row4 = QHBoxLayout()
+        row5 = QHBoxLayout()
         right_layout.addLayout(row1)
         right_layout.addLayout(row2)
         right_layout.addLayout(row3)
         right_layout.addLayout(row4)
+        right_layout.addLayout(row5)
 
         self.syntax_card = self._make_card("这段代码用了什么语法")
         self.feature_card = self._make_card("这段代码里识别到了什么")
         self.action_card = self._make_card("这段代码具体做了哪些动作")
         self.dependency_card = self._make_card("这段代码依赖谁")
+        self.related_function_card = self._make_card("这段代码和模板里哪几个函数最相关")
         self.impact_card = self._make_card("改这里会影响哪里")
         self.steps_card = self._make_card("建议按什么顺序看")
         self.execution_card = self._make_card("代码执行链")
@@ -167,11 +170,12 @@ class MainWindow(QMainWindow):
         row1.addLayout(self.feature_card["layout"])
         row2.addLayout(self.action_card["layout"])
         row2.addLayout(self.dependency_card["layout"])
+        row3.addLayout(self.related_function_card["layout"])
         row3.addLayout(self.impact_card["layout"])
-        row3.addLayout(self.steps_card["layout"])
+        row4.addLayout(self.steps_card["layout"])
         row4.addLayout(self.execution_card["layout"])
-        row4.addLayout(self.term_card["layout"])
-        right_layout.addLayout(self.modify_card["layout"])
+        row5.addLayout(self.term_card["layout"])
+        row5.addLayout(self.modify_card["layout"])
 
         self.load_sample_button.clicked.connect(self.handle_load_sample)
         self.analyze_button.clicked.connect(self.handle_analyze)
@@ -240,6 +244,7 @@ class MainWindow(QMainWindow):
         self.feature_card["box"].setPlainText(result["feature_text"])
         self.action_card["box"].setPlainText(result["action_text"])
         self.dependency_card["box"].setPlainText(result["dependency_text"])
+        self.related_function_card["box"].setPlainText(result["related_function_text"])
         self.impact_card["box"].setPlainText(result["impact_text"])
         self.steps_card["box"].setPlainText(result["reading_steps_text"])
         self.execution_card["box"].setPlainText(result["execution_chain_text"])
@@ -253,6 +258,7 @@ class MainWindow(QMainWindow):
             f"这段代码里识别到了什么：\n{result['feature_text']}\n\n"
             f"这段代码具体做了哪些动作：\n{result['action_text']}\n\n"
             f"这段代码依赖谁：\n{result['dependency_text']}\n\n"
+            f"这段代码和模板里哪几个函数最相关：\n{result['related_function_text']}\n\n"
             f"改这里会影响哪里：\n{result['impact_text']}\n\n"
             f"建议按什么顺序看：\n{result['reading_steps_text']}\n\n"
             f"代码执行链：\n{result['execution_chain_text']}\n\n"
@@ -268,6 +274,7 @@ class MainWindow(QMainWindow):
         self.feature_card["box"].clear()
         self.action_card["box"].clear()
         self.dependency_card["box"].clear()
+        self.related_function_card["box"].clear()
         self.impact_card["box"].clear()
         self.steps_card["box"].clear()
         self.execution_card["box"].clear()

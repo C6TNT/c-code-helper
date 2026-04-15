@@ -21,6 +21,7 @@ def format_result(
     modify_hints: list[str],
     specific_actions: list[str],
     dependency_hints: list[str],
+    related_function_hints: list[str],
     impact_hints: list[str],
     execution_chain: list[str],
 ) -> dict:
@@ -32,6 +33,7 @@ def format_result(
         "modify_hint_text": _bullet_join(modify_hints),
         "action_text": _bullet_join(specific_actions),
         "dependency_text": _bullet_join(dependency_hints),
+        "related_function_text": _bullet_join(related_function_hints),
         "impact_text": _bullet_join(impact_hints),
         "execution_chain_text": _number_join(execution_chain),
         "reading_steps_text": _number_join(steps),

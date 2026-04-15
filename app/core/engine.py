@@ -6,6 +6,7 @@ from app.core.explainer import (
     build_impact_hints,
     build_modify_hints,
     build_reading_steps,
+    build_related_function_hints,
     build_specific_actions,
     build_syntax_summary,
     build_term_explanations,
@@ -26,6 +27,7 @@ def analyze_code(code_text: str) -> dict:
     modify_hints = build_modify_hints(features, scene)
     specific_actions = build_specific_actions(features)
     dependency_hints = build_dependency_hints(features)
+    related_function_hints = build_related_function_hints(features, scene)
     impact_hints = build_impact_hints(features, scene)
     execution_chain = build_execution_chain(features, scene)
     steps = build_reading_steps(features)
@@ -42,6 +44,7 @@ def analyze_code(code_text: str) -> dict:
         modify_hints,
         specific_actions,
         dependency_hints,
+        related_function_hints,
         impact_hints,
         execution_chain,
     )
