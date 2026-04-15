@@ -47,6 +47,13 @@ SAMPLE_SNIPPETS = {
 } app_param_t;
 
 static app_param_t g_param = {300, 30, 200};""",
+    "参数保存函数": """static void App_SaveParam(void)
+{
+    AT24C02_WriteByte(0x00, (u8)(g_param.temp_limit_x10 / 10));
+    AT24C02_WriteByte(0x01, (u8)(g_param.temp_limit_x10 % 10));
+    AT24C02_WriteByte(0x02, (u8)g_param.dist_limit);
+    AT24C02_WriteByte(0x03, g_param.adc_limit);
+}""",
     "报警判断逻辑": """void App_UpdateAlarm(void)
 {
     g_alarm = 0;
@@ -59,14 +66,6 @@ static app_param_t g_param = {300, 30, 200};""",
         g_alarm = 1;
     }
 }""",
-    "状态枚举": """typedef enum
-{
-    PAGE_DATA = 0,
-    PAGE_PARAM,
-    PAGE_TIME,
-    PAGE_FREQ,
-    PAGE_RECORD
-} app_page_t;""",
 }
 
 
@@ -74,7 +73,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("C 语言代码理解助手")
-        self.resize(1420, 900)
+        self.resize(1500, 920)
         self._last_result = ""
         self._build_ui()
 
@@ -86,7 +85,7 @@ class MainWindow(QMainWindow):
         left_layout = QVBoxLayout()
         right_layout = QVBoxLayout()
         main_layout.addLayout(left_layout, 4)
-        main_layout.addLayout(right_layout, 5)
+        main_layout.addLayout(right_layout, 6)
 
         title_left = QLabel("代码输入区")
         title_left.setStyleSheet("font-size: 26px; font-weight: 700; color: #123b66;")
@@ -108,10 +107,7 @@ class MainWindow(QMainWindow):
             "QComboBox {background:#ffffff; color:#1d2b38; border:2px solid #d8e6f4; border-radius:12px; font-size:15px; padding:8px;}"
         )
         self.load_sample_button = QPushButton("载入示例")
-        self.load_sample_button.setStyleSheet(
-            "QPushButton {background:#2f80ed; color:white; font-size:15px; font-weight:700; border:none; border-radius:12px; padding:12px 16px;}"
-            "QPushButton:hover {background:#276fd0;}"
-        )
+        self.load_sample_button.setStyleSheet(self._button_style())
         sample_row.addWidget(self.sample_combo, 1)
         sample_row.addWidget(self.load_sample_button)
         left_layout.addLayout(sample_row)
@@ -120,19 +116,15 @@ class MainWindow(QMainWindow):
         self.code_input.setPlaceholderText(
             "例如：粘贴 app.c 里的某个页面函数、按键函数、参数结构体或判断逻辑。"
         )
-        self.code_input.setStyleSheet(
-            "QTextEdit {background:#ffffff; color:#1d2b38; border:2px solid #d8e6f4; border-radius:14px; font-size:16px; padding:10px;}"
-        )
+        self.code_input.setStyleSheet(self._text_style())
         left_layout.addWidget(self.code_input, 1)
 
         button_row = QHBoxLayout()
         self.analyze_button = QPushButton("开始讲解")
         self.clear_button = QPushButton("清空")
-        for button in (self.analyze_button, self.clear_button):
-            button.setStyleSheet(
-                "QPushButton {background:#2f80ed; color:white; font-size:16px; font-weight:700; border:none; border-radius:12px; padding:14px 18px;}"
-                "QPushButton:hover {background:#276fd0;}"
-            )
+        self.copy_button = QPushButton("复制讲解结果")
+        for button in (self.analyze_button, self.clear_button, self.copy_button):
+            button.setStyleSheet(self._button_style())
             button_row.addWidget(button)
         left_layout.addLayout(button_row)
 
@@ -142,56 +134,82 @@ class MainWindow(QMainWindow):
 
         self.scene_card = QTextEdit()
         self.scene_card.setReadOnly(True)
-        self.scene_card.setMaximumHeight(110)
-        self.scene_card.setStyleSheet(
-            "QTextEdit {background:#fff5eb; color:#6d3d11; border:2px solid #f3d1ac; border-radius:14px; font-size:16px; padding:10px;}"
-        )
-        right_layout.addWidget(self.scene_card)
+        self.scene_card.setMaximumHeight(100)
+        self.scene_card.setStyleSheet(self._highlight_style("#fff5eb", "#6d3d11", "#f3d1ac"))
+        right_layout.addWidget(self._wrap_section("这段代码更像哪类逻辑", self.scene_card))
 
         self.requirement_card = QTextEdit()
         self.requirement_card.setReadOnly(True)
-        self.requirement_card.setMaximumHeight(110)
-        self.requirement_card.setStyleSheet(
-            "QTextEdit {background:#eef9f1; color:#22543d; border:2px solid #b9e5c7; border-radius:14px; font-size:16px; padding:10px;}"
-        )
-        right_layout.addWidget(self.requirement_card)
+        self.requirement_card.setMaximumHeight(100)
+        self.requirement_card.setStyleSheet(self._highlight_style("#eef9f1", "#22543d", "#b9e5c7"))
+        right_layout.addWidget(self._wrap_section("这段代码更像对应哪类赛题要求", self.requirement_card))
 
-        row_top = QHBoxLayout()
-        row_bottom = QHBoxLayout()
-        row_bottom2 = QHBoxLayout()
-        row_bottom3 = QHBoxLayout()
-        right_layout.addLayout(row_top)
-        right_layout.addLayout(row_bottom)
-        right_layout.addLayout(row_bottom2)
-        right_layout.addLayout(row_bottom3)
+        row1 = QHBoxLayout()
+        row2 = QHBoxLayout()
+        row3 = QHBoxLayout()
+        row4 = QHBoxLayout()
+        right_layout.addLayout(row1)
+        right_layout.addLayout(row2)
+        right_layout.addLayout(row3)
+        right_layout.addLayout(row4)
 
         self.syntax_card = self._make_card("这段代码用了什么语法")
         self.feature_card = self._make_card("这段代码里识别到了什么")
         self.action_card = self._make_card("这段代码具体做了哪些动作")
+        self.dependency_card = self._make_card("这段代码依赖谁")
+        self.impact_card = self._make_card("改这里会影响哪里")
         self.steps_card = self._make_card("建议按什么顺序看")
-        self.explain_card = self._make_card("这段代码大概在做什么")
-        self.term_card = self._make_card("这段代码里的术语怎么理解")
+        self.execution_card = self._make_card("代码执行链")
+        self.term_card = self._make_card("术语怎么理解")
         self.modify_card = self._make_card("如果你要改这段代码，先看哪里")
 
-        row_top.addLayout(self.syntax_card["layout"])
-        row_top.addLayout(self.feature_card["layout"])
-        row_bottom.addLayout(self.steps_card["layout"])
-        row_bottom.addLayout(self.explain_card["layout"])
-        row_bottom2.addLayout(self.action_card["layout"])
-        row_bottom2.addLayout(self.term_card["layout"])
-        row_bottom3.addLayout(self.modify_card["layout"])
-
-        self.copy_button = QPushButton("复制讲解结果")
-        self.copy_button.setStyleSheet(
-            "QPushButton {background:#2f80ed; color:white; font-size:16px; font-weight:700; border:none; border-radius:12px; padding:14px 18px;}"
-            "QPushButton:hover {background:#276fd0;}"
-        )
-        right_layout.addWidget(self.copy_button)
+        row1.addLayout(self.syntax_card["layout"])
+        row1.addLayout(self.feature_card["layout"])
+        row2.addLayout(self.action_card["layout"])
+        row2.addLayout(self.dependency_card["layout"])
+        row3.addLayout(self.impact_card["layout"])
+        row3.addLayout(self.steps_card["layout"])
+        row4.addLayout(self.execution_card["layout"])
+        row4.addLayout(self.term_card["layout"])
+        right_layout.addLayout(self.modify_card["layout"])
 
         self.load_sample_button.clicked.connect(self.handle_load_sample)
         self.analyze_button.clicked.connect(self.handle_analyze)
         self.clear_button.clicked.connect(self.handle_clear)
         self.copy_button.clicked.connect(self.handle_copy)
+
+    def _button_style(self) -> str:
+        return (
+            "QPushButton {background:#2f80ed; color:white; font-size:16px; font-weight:700; "
+            "border:none; border-radius:12px; padding:14px 18px;}"
+            "QPushButton:hover {background:#276fd0;}"
+        )
+
+    def _text_style(self) -> str:
+        return (
+            "QTextEdit {background:#ffffff; color:#1d2b38; border:2px solid #d8e6f4; "
+            "border-radius:14px; font-size:16px; padding:10px;}"
+        )
+
+    def _card_style(self) -> str:
+        return (
+            "QTextEdit {background:#eef6ff; color:#1d2b38; border:2px solid #d7e8fb; "
+            "border-radius:14px; font-size:15px; padding:10px;}"
+        )
+
+    def _highlight_style(self, bg: str, fg: str, border: str) -> str:
+        return (
+            f"QTextEdit {{background:{bg}; color:{fg}; border:2px solid {border}; "
+            "border-radius:14px; font-size:16px; padding:10px;}"
+        )
+
+    def _wrap_section(self, title: str, widget: QTextEdit) -> QVBoxLayout:
+        layout = QVBoxLayout()
+        label = QLabel(title)
+        label.setStyleSheet("font-size: 18px; font-weight: 700; color: #123b66;")
+        layout.addWidget(label)
+        layout.addWidget(widget)
+        return layout
 
     def _make_card(self, title: str) -> dict:
         layout = QVBoxLayout()
@@ -199,10 +217,8 @@ class MainWindow(QMainWindow):
         label.setStyleSheet("font-size: 18px; font-weight: 700; color: #123b66;")
         box = QTextEdit()
         box.setReadOnly(True)
-        box.setMinimumHeight(180)
-        box.setStyleSheet(
-            "QTextEdit {background:#eef6ff; color:#1d2b38; border:2px solid #d7e8fb; border-radius:14px; font-size:15px; padding:10px;}"
-        )
+        box.setMinimumHeight(170)
+        box.setStyleSheet(self._card_style())
         layout.addWidget(label)
         layout.addWidget(box)
         return {"layout": layout, "box": box}
@@ -223,8 +239,10 @@ class MainWindow(QMainWindow):
         self.syntax_card["box"].setPlainText(result["summary_text"])
         self.feature_card["box"].setPlainText(result["feature_text"])
         self.action_card["box"].setPlainText(result["action_text"])
+        self.dependency_card["box"].setPlainText(result["dependency_text"])
+        self.impact_card["box"].setPlainText(result["impact_text"])
         self.steps_card["box"].setPlainText(result["reading_steps_text"])
-        self.explain_card["box"].setPlainText(result["explanation_text"])
+        self.execution_card["box"].setPlainText(result["execution_chain_text"])
         self.term_card["box"].setPlainText(result["term_text"])
         self.modify_card["box"].setPlainText(result["modify_hint_text"])
 
@@ -232,12 +250,14 @@ class MainWindow(QMainWindow):
             f"代码归类：{result['scene']}\n\n"
             f"这段代码更像对应哪类赛题要求：\n{result['requirement_text']}\n\n"
             f"这段代码用了什么语法：\n{result['summary_text']}\n\n"
-            f"这段代码里的术语怎么理解：\n{result['term_text']}\n\n"
-            f"如果你要改这段代码，先看哪里：\n{result['modify_hint_text']}\n\n"
             f"这段代码里识别到了什么：\n{result['feature_text']}\n\n"
             f"这段代码具体做了哪些动作：\n{result['action_text']}\n\n"
+            f"这段代码依赖谁：\n{result['dependency_text']}\n\n"
+            f"改这里会影响哪里：\n{result['impact_text']}\n\n"
             f"建议按什么顺序看：\n{result['reading_steps_text']}\n\n"
-            f"这段代码大概在做什么：\n{result['explanation_text']}"
+            f"代码执行链：\n{result['execution_chain_text']}\n\n"
+            f"术语怎么理解：\n{result['term_text']}\n\n"
+            f"如果你要改这段代码，先看哪里：\n{result['modify_hint_text']}"
         )
 
     def handle_clear(self) -> None:
@@ -247,8 +267,10 @@ class MainWindow(QMainWindow):
         self.syntax_card["box"].clear()
         self.feature_card["box"].clear()
         self.action_card["box"].clear()
+        self.dependency_card["box"].clear()
+        self.impact_card["box"].clear()
         self.steps_card["box"].clear()
-        self.explain_card["box"].clear()
+        self.execution_card["box"].clear()
         self.term_card["box"].clear()
         self.modify_card["box"].clear()
         self._last_result = ""

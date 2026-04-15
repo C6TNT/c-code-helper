@@ -18,11 +18,7 @@ KEYWORD_PATTERNS = {
 FUNC_DEF_PATTERN = re.compile(
     r"\b(?:void|char|int|float|double|bit|u8|u16|u32|unsigned|signed|static)\b[^\n;{}]*\b([A-Za-z_]\w*)\s*\([^;{}]*\)\s*\{"
 )
-
-VAR_PATTERN = re.compile(
-    r"\b(?:bit|char|int|u8|u16|u32|float|double)\s+([A-Za-z_]\w*)"
-)
-
+VAR_PATTERN = re.compile(r"\b(?:bit|char|int|u8|u16|u32|float|double)\s+([A-Za-z_]\w*)")
 CALL_PATTERN = re.compile(r"\b([A-Za-z_]\w*)\s*\(")
 ASSIGN_PATTERN = re.compile(r"\b([A-Za-z_]\w*)\s*=")
 
@@ -47,6 +43,28 @@ SEMANTIC_RULES = [
 ]
 
 
+INTERFACE_PATTERNS = {
+    "EEPROM": ("AT24C02_WriteByte", "AT24C02_ReadByte", "EEPROM_Write", "EEPROM_Read"),
+    "数码管": ("SEG_SetCode", "SEG_SetDigit", "SEG_SetDigitDp", "SEG_Clear"),
+    "按键": ("Key_GetEvent", "Key_GetShortEvent", "Key_GetLongEvent", "Key_GetDoubleEvent"),
+    "温度传感器": ("DS18B20",),
+    "时钟芯片": ("DS1302",),
+    "ADC/DAC": ("PCF8591",),
+    "频率测量": ("FREQ_", "freq_hz", "NE555"),
+    "超声波": ("Ultrasonic", "distance_cm", "dist"),
+    "串口": ("UART_", "uart"),
+    "LED/继电器/蜂鸣器": ("led", "relay", "beep", "alarm"),
+}
+
+
+def _unique_items(items: list[str], limit: int) -> list[str]:
+    seen = []
+    for item in items:
+        if item not in seen:
+            seen.append(item)
+    return seen[:limit]
+
+
 def parse_code_features(code_text: str) -> dict:
     features = {
         "keywords": [],
@@ -55,6 +73,7 @@ def parse_code_features(code_text: str) -> dict:
         "calls": [],
         "assignments": [],
         "semantic_tags": [],
+        "interfaces": [],
         "line_count": 0,
         "non_empty_line_count": 0,
     }
@@ -67,35 +86,20 @@ def parse_code_features(code_text: str) -> dict:
         if re.search(pattern, code_text):
             features["keywords"].append(key)
 
-    seen_funcs = []
-    for match in FUNC_DEF_PATTERN.finditer(code_text):
-        name = match.group(1)
-        if name not in seen_funcs:
-            seen_funcs.append(name)
-    features["functions"] = seen_funcs
-
-    seen_vars = []
-    for match in VAR_PATTERN.finditer(code_text):
-        name = match.group(1)
-        if name not in seen_vars:
-            seen_vars.append(name)
-    features["variables"] = seen_vars[:12]
-
-    seen_calls = []
+    functions = [match.group(1) for match in FUNC_DEF_PATTERN.finditer(code_text)]
+    variables = [match.group(1) for match in VAR_PATTERN.finditer(code_text)]
+    calls = []
     for match in CALL_PATTERN.finditer(code_text):
         name = match.group(1)
         if name in ("if", "for", "while", "switch", "return", "sizeof"):
             continue
-        if name not in seen_calls:
-            seen_calls.append(name)
-    features["calls"] = seen_calls[:16]
+        calls.append(name)
+    assignments = [match.group(1) for match in ASSIGN_PATTERN.finditer(code_text)]
 
-    seen_assignments = []
-    for match in ASSIGN_PATTERN.finditer(code_text):
-        name = match.group(1)
-        if name not in seen_assignments:
-            seen_assignments.append(name)
-    features["assignments"] = seen_assignments[:12]
+    features["functions"] = _unique_items(functions, 8)
+    features["variables"] = _unique_items(variables, 14)
+    features["calls"] = _unique_items(calls, 20)
+    features["assignments"] = _unique_items(assignments, 14)
 
     joined = " ".join(
         features["functions"]
@@ -103,8 +107,14 @@ def parse_code_features(code_text: str) -> dict:
         + features["calls"]
         + features["assignments"]
     )
+    joined_lower = joined.lower()
+
     for tag, tokens in SEMANTIC_RULES:
         if any(token in joined for token in tokens):
             features["semantic_tags"].append(tag)
+
+    for label, tokens in INTERFACE_PATTERNS.items():
+        if any(token.lower() in joined_lower for token in tokens):
+            features["interfaces"].append(label)
 
     return features

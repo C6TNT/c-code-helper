@@ -1,6 +1,9 @@
 from app.core.classifier import classify_code_scene, map_scene_to_requirement
 from app.core.explainer import (
     build_code_explanation,
+    build_dependency_hints,
+    build_execution_chain,
+    build_impact_hints,
     build_modify_hints,
     build_reading_steps,
     build_specific_actions,
@@ -13,7 +16,7 @@ from app.core.parser import parse_code_features
 
 def analyze_code(code_text: str) -> dict:
     if not code_text.strip():
-        raise ValueError("请先粘贴一段 C 代码，再开始分析。")
+        raise ValueError("请先粘贴一段 C 代码，再开始讲解。")
 
     features = parse_code_features(code_text)
     scene = classify_code_scene(features)
@@ -22,8 +25,12 @@ def analyze_code(code_text: str) -> dict:
     term_explanations = build_term_explanations(features)
     modify_hints = build_modify_hints(features, scene)
     specific_actions = build_specific_actions(features)
+    dependency_hints = build_dependency_hints(features)
+    impact_hints = build_impact_hints(features, scene)
+    execution_chain = build_execution_chain(features, scene)
     steps = build_reading_steps(features)
     explanation = build_code_explanation(features, scene)
+
     return format_result(
         features,
         scene,
@@ -34,4 +41,7 @@ def analyze_code(code_text: str) -> dict:
         term_explanations,
         modify_hints,
         specific_actions,
+        dependency_hints,
+        impact_hints,
+        execution_chain,
     )

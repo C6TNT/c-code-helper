@@ -79,28 +79,28 @@ def build_code_explanation(features: dict, scene: str) -> str:
         parts.append(f"当前最像的核心函数是：{_join_items(functions, 3)}。")
 
     if "param_save" in tags and "eeprom_write" in tags:
-        parts.append("这段代码更像“把参数拆开后写入 EEPROM”。重点不是单纯调用 AT24C02，而是先把参数整理成要保存的格式，再逐个地址写进去。")
+        parts.append("它更像一段参数保存逻辑：先从参数变量里取值，再拆分成适合保存的格式，最后逐个地址写入 EEPROM。")
     elif "param_load" in tags and "eeprom_read" in tags:
-        parts.append("这段代码更像“从 EEPROM 读出参数，再还原回程序里的参数变量”。真正的重点是读出来之后怎么拼回去。")
+        parts.append("它更像一段参数加载逻辑：先从 EEPROM 把原始值读出来，再拼回程序真正使用的参数变量。")
     elif "key_handle" in tags and "page_switch" in tags:
-        parts.append("这段代码更像按键业务分发函数。它先取键值，再根据不同按键走不同分支，里面常见的是切页面、进参数模式、改状态。")
+        parts.append("它更像按键业务分发函数：先取按键值，再根据不同键值进入不同分支，里面常见的是切页面、切模式、改参数状态。")
     elif "display_output" in tags:
-        parts.append("这段代码更像显示函数。真正有用的是：它决定了哪一位显示什么字符、什么数字，以及小数点要不要亮。")
+        parts.append("它更像页面显示函数：前面负责算显示内容，后面负责把字符或数字送到数码管对应的位置。")
     elif "alarm_output" in tags:
-        parts.append("这段代码更像报警或输出控制逻辑。通常是先根据条件置位状态，再把这个状态映射到 LED、继电器或蜂鸣器。")
+        parts.append("它更像报警/输出控制函数：先根据条件形成状态，再把状态映射到 LED、继电器或蜂鸣器。")
     elif "temp_sample" in tags or "adc_sample" in tags or "freq_sample" in tags or "distance_sample" in tags:
-        parts.append("这段代码更像数据采样或数据更新逻辑。重点通常不是接口名字，而是采样值最后存到了哪个变量里，后面又会被谁拿去显示或判断。")
+        parts.append("它更像采样/更新函数：关键不是接口名字，而是采样值最后写进哪个变量，以及后面谁会继续用它。")
     elif "rtc_sample" in tags:
-        parts.append("这段代码更像时间读取或时间显示准备逻辑。重点通常是读出来的时分秒如何拆位、如何用于显示或控制。")
+        parts.append("它更像时间读取或时间显示准备逻辑：重点通常是读出的时分秒最后如何拆位、显示或参与控制。")
 
     if assignments:
-        parts.append(f"这段代码里实际被修改的关键变量有：{_join_items(assignments, 5)}。这往往比单纯看调用名更能说明它真正改了什么。")
+        parts.append(f"这段代码里真正被改动的关键变量有：{_join_items(assignments, 5)}。这比只看调用名更能说明它到底在改什么。")
 
     if calls:
         parts.append(f"这段代码里最关键的调用有：{_join_items(calls, 5)}。先盯住这些调用前后的变量变化，通常最容易看懂。")
 
     if variables:
-        parts.append(f"这段代码里最值得先盯的变量有：{_join_items(variables, 5)}。")
+        parts.append(f"最值得先盯的变量有：{_join_items(variables, 5)}。")
 
     return "\n".join(parts)
 
@@ -152,22 +152,22 @@ def build_modify_hints(features: dict, scene: str) -> list[str]:
 
     if "param_save" in tags and "eeprom_write" in tags:
         hints.append("如果你要改这段保存参数的代码，先看参数结构体里真正要保存哪些字段，再看它们被拆成了几个 EEPROM 地址。")
-        hints.append("这类代码最容易漏改的是：结构体字段改了，但 WriteByte 的地址布局和拆分方式没同步。")
+        hints.append("高风险点：结构体字段改了，但 WriteByte 的地址布局和拆分方式没同步。")
     elif "param_load" in tags and "eeprom_read" in tags:
         hints.append("如果你要改这段读参数的代码，先看 EEPROM 每个地址读出来后，最后是怎么还原回参数变量的。")
-        hints.append("这类代码最容易漏改的是：保存逻辑改了，但读取还原逻辑没跟着改。")
+        hints.append("高风险点：保存逻辑改了，但读取还原逻辑没跟着改。")
     elif "key_handle" in tags and "page_switch" in tags:
         hints.append("如果你要改这段按键逻辑，先看 key 值进了哪个分支，再看分支里到底改的是页面、模式还是参数。")
-        hints.append("这类代码最容易漏改的是：页面枚举改了，但按键分支里的目标页面没同步。")
+        hints.append("高风险点：页面枚举改了，但按键分支里的目标页面没同步。")
     elif "display_output" in tags:
-        hints.append("如果你要改这段显示代码，先看显示前的数据是怎么算出来的，再看最后是哪一位显示哪个字符。")
-        hints.append("这类代码最容易漏改的是：数字本身改了，但位号、字符位或小数点位没有同步。")
+        hints.append("如果你要改这段显示代码，先看显示前的数据怎么计算出来，再看最后是哪一位显示哪个字符。")
+        hints.append("高风险点：数字本身改了，但位号、字符位或小数点位没有同步。")
     elif "alarm_output" in tags:
         hints.append("如果你要改这段报警/输出代码，先看报警状态在哪被置位，再看输出函数怎么响应这个状态。")
-        hints.append("这类代码最容易漏改的是：改了报警条件，但 LED/继电器输出没有一起调整。")
+        hints.append("高风险点：改了报警条件，但 LED、继电器或蜂鸣器输出没有一起调整。")
     elif {"temp_sample", "adc_sample", "freq_sample", "distance_sample"} & tags:
         hints.append("如果你要改这段采样代码，先确认采样值最终写入哪个变量，再找这个变量后面在哪显示或参与判断。")
-        hints.append("这类代码最容易漏改的是：数据变量改名了，但显示页或报警判断里还在用旧变量。")
+        hints.append("高风险点：数据变量改名了，但显示页或报警判断里还在用旧变量。")
     else:
         hints.append("先从变量名和函数名判断这段代码属于哪一块，再只改这一块最核心的 1 到 2 个变量或分支。")
 
@@ -214,3 +214,90 @@ def build_specific_actions(features: dict) -> list[str]:
         actions.append("暂时没有识别到特别鲜明的外设动作，这段代码更像纯业务判断或数据整理逻辑。")
 
     return actions
+
+
+def build_dependency_hints(features: dict) -> list[str]:
+    variables = features.get("variables", [])
+    calls = features.get("calls", [])
+    interfaces = features.get("interfaces", [])
+    hints = []
+
+    if variables:
+        hints.append(f"这段代码依赖这些变量：{_join_items(variables, 6)}。")
+    if calls:
+        hints.append(f"这段代码依赖这些函数调用：{_join_items(calls, 6)}。")
+    if interfaces:
+        hints.append(f"这段代码依赖这些外设或接口层：{_join_items(interfaces, 5)}。")
+
+    if not hints:
+        hints.append("暂时没有识别到特别明确的依赖对象，它更像一段纯局部计算或判断逻辑。")
+
+    return hints
+
+
+def build_impact_hints(features: dict, scene: str) -> list[str]:
+    tags = set(features.get("semantic_tags", []))
+    impacts = []
+
+    if "param_save" in tags or "param_load" in tags or "param_edit" in tags:
+        impacts.append("改这里可能会同时影响：参数保存、参数读取、参数显示。")
+    if "page_switch" in tags:
+        impacts.append("改这里可能会同时影响：按键切页、页面编号、页面显示函数。")
+    if "display_output" in tags:
+        impacts.append("改这里可能会同时影响：数码管布局、字符位置、小数点位置。")
+    if "alarm_output" in tags:
+        impacts.append("改这里可能会同时影响：LED、继电器、蜂鸣器的输出行为。")
+    if {"temp_sample", "adc_sample", "freq_sample", "distance_sample"} & tags:
+        impacts.append("改这里可能会同时影响：实时数据显示、报警判断、参数阈值判断。")
+    if "rtc_sample" in tags:
+        impacts.append("改这里可能会同时影响：时间显示、整点控制、历史时间记录。")
+    if "uart_io" in tags:
+        impacts.append("改这里可能会同时影响：串口输出格式、调试信息、串口题交互逻辑。")
+
+    if not impacts:
+        if "页面显示" in scene:
+            impacts.append("改这里大概率会影响当前页面显示格式和对应的数据摆放方式。")
+        elif "按键处理" in scene:
+            impacts.append("改这里大概率会影响页面切换、模式切换或按键功能分发。")
+        else:
+            impacts.append("改这里大概率会影响和它共享变量的其他代码段，所以改完要回头检查调用链。")
+
+    return impacts
+
+
+def build_execution_chain(features: dict, scene: str) -> list[str]:
+    tags = set(features.get("semantic_tags", []))
+    variables = features.get("variables", [])
+    calls = features.get("calls", [])
+    assignments = features.get("assignments", [])
+
+    chain = []
+
+    if "key_read" in tags:
+        chain.append("输入：先从按键接口读取键值。")
+    elif {"temp_sample", "adc_sample", "freq_sample", "distance_sample", "rtc_sample"} & tags:
+        chain.append("输入：先从外设或传感器读取原始数据。")
+    elif variables:
+        chain.append(f"输入：这段代码一开始主要依赖这些已有变量：{_join_items(variables, 4)}。")
+    else:
+        chain.append("输入：这段代码主要从当前函数已有变量或上层状态开始。")
+
+    if assignments:
+        chain.append(f"处理中：中间重点修改了这些变量：{_join_items(assignments, 5)}。")
+    elif calls:
+        chain.append(f"处理中：中间主要围绕这些调用展开：{_join_items(calls, 5)}。")
+    else:
+        chain.append("处理中：中间主要在做判断、计算或状态整理。")
+
+    if "eeprom_write" in tags:
+        chain.append("输出：最后把处理结果写进 EEPROM。")
+    elif "display_output" in tags:
+        chain.append("输出：最后把内容送到数码管显示接口。")
+    elif "alarm_output" in tags:
+        chain.append("输出：最后把状态映射到 LED、继电器或蜂鸣器。")
+    elif "page_switch" in tags:
+        chain.append("输出：最后把结果落到页面状态、模式状态或参数状态。")
+    else:
+        chain.append(f"输出：最后主要把结果保存在这些变量或状态里：{_join_items(assignments or variables, 4)}。")
+
+    return chain
