@@ -73,7 +73,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("C 语言代码理解助手")
-        self.resize(1560, 980)
+        self.resize(1680, 1020)
         self._last_result = ""
         self._build_ui()
 
@@ -85,7 +85,7 @@ class MainWindow(QMainWindow):
         left_layout = QVBoxLayout()
         right_layout = QVBoxLayout()
         main_layout.addLayout(left_layout, 4)
-        main_layout.addLayout(right_layout, 6)
+        main_layout.addLayout(right_layout, 7)
 
         title_left = QLabel("代码输入区")
         title_left.setStyleSheet("font-size: 26px; font-weight: 700; color: #123b66;")
@@ -103,9 +103,7 @@ class MainWindow(QMainWindow):
         sample_row = QHBoxLayout()
         self.sample_combo = QComboBox()
         self.sample_combo.addItems(SAMPLE_SNIPPETS.keys())
-        self.sample_combo.setStyleSheet(
-            "QComboBox {background:#ffffff; color:#1d2b38; border:2px solid #d8e6f4; border-radius:12px; font-size:15px; padding:8px;}"
-        )
+        self.sample_combo.setStyleSheet(self._combo_style())
         self.load_sample_button = QPushButton("载入示例")
         self.load_sample_button.setStyleSheet(self._button_style())
         sample_row.addWidget(self.sample_combo, 1)
@@ -114,7 +112,7 @@ class MainWindow(QMainWindow):
 
         self.code_input = QTextEdit()
         self.code_input.setPlaceholderText(
-            "例如：粘贴 app.c 里的某个页面函数、按键函数、参数结构体或判断逻辑。"
+            "例如：粘贴 app.c 里的某个页面函数、按键函数、参数结构体、保存函数或判断逻辑。"
         )
         self.code_input.setStyleSheet(self._text_style())
         left_layout.addWidget(self.code_input, 1)
@@ -132,34 +130,33 @@ class MainWindow(QMainWindow):
         title_right.setStyleSheet("font-size: 26px; font-weight: 700; color: #123b66;")
         right_layout.addWidget(title_right)
 
-        self.scene_card = QTextEdit()
-        self.scene_card.setReadOnly(True)
-        self.scene_card.setMaximumHeight(100)
-        self.scene_card.setStyleSheet(self._highlight_style("#fff5eb", "#6d3d11", "#f3d1ac"))
-        right_layout.addWidget(self._wrap_section("这段代码更像哪类逻辑", self.scene_card))
+        self.scene_card = self._make_top_card("#fff5eb", "#6d3d11", "#f3d1ac")
+        right_layout.addLayout(self._wrap_section("这段代码更像哪类逻辑", self.scene_card))
 
-        self.requirement_card = QTextEdit()
-        self.requirement_card.setReadOnly(True)
-        self.requirement_card.setMaximumHeight(100)
-        self.requirement_card.setStyleSheet(self._highlight_style("#eef9f1", "#22543d", "#b9e5c7"))
-        right_layout.addWidget(self._wrap_section("这段代码更像对应哪类赛题要求", self.requirement_card))
+        self.requirement_card = self._make_top_card("#eef9f1", "#22543d", "#b9e5c7")
+        right_layout.addLayout(self._wrap_section("这段代码更像对应哪类赛题要求", self.requirement_card))
 
         row1 = QHBoxLayout()
         row2 = QHBoxLayout()
         row3 = QHBoxLayout()
         row4 = QHBoxLayout()
         row5 = QHBoxLayout()
+        row6 = QHBoxLayout()
         right_layout.addLayout(row1)
         right_layout.addLayout(row2)
         right_layout.addLayout(row3)
         right_layout.addLayout(row4)
         right_layout.addLayout(row5)
+        right_layout.addLayout(row6)
 
         self.syntax_card = self._make_card("这段代码用了什么语法")
         self.feature_card = self._make_card("这段代码里识别到了什么")
         self.action_card = self._make_card("这段代码具体做了哪些动作")
         self.dependency_card = self._make_card("这段代码依赖谁")
         self.related_function_card = self._make_card("这段代码和模板里哪几个函数最相关")
+        self.linked_variable_card = self._make_card("这段代码常和哪些变量一起联动")
+        self.sync_check_card = self._make_card("改完这里后还要同步检查哪几处")
+        self.call_context_card = self._make_card("这段代码大概会在哪里被调用")
         self.impact_card = self._make_card("改这里会影响哪里")
         self.steps_card = self._make_card("建议按什么顺序看")
         self.execution_card = self._make_card("代码执行链")
@@ -171,11 +168,14 @@ class MainWindow(QMainWindow):
         row2.addLayout(self.action_card["layout"])
         row2.addLayout(self.dependency_card["layout"])
         row3.addLayout(self.related_function_card["layout"])
-        row3.addLayout(self.impact_card["layout"])
-        row4.addLayout(self.steps_card["layout"])
-        row4.addLayout(self.execution_card["layout"])
-        row5.addLayout(self.term_card["layout"])
-        row5.addLayout(self.modify_card["layout"])
+        row3.addLayout(self.linked_variable_card["layout"])
+        row4.addLayout(self.sync_check_card["layout"])
+        row4.addLayout(self.call_context_card["layout"])
+        row5.addLayout(self.impact_card["layout"])
+        row5.addLayout(self.steps_card["layout"])
+        row6.addLayout(self.execution_card["layout"])
+        row6.addLayout(self.term_card["layout"])
+        row6.addLayout(self.modify_card["layout"])
 
         self.load_sample_button.clicked.connect(self.handle_load_sample)
         self.analyze_button.clicked.connect(self.handle_analyze)
@@ -187,6 +187,12 @@ class MainWindow(QMainWindow):
             "QPushButton {background:#2f80ed; color:white; font-size:16px; font-weight:700; "
             "border:none; border-radius:12px; padding:14px 18px;}"
             "QPushButton:hover {background:#276fd0;}"
+        )
+
+    def _combo_style(self) -> str:
+        return (
+            "QComboBox {background:#ffffff; color:#1d2b38; border:2px solid #d8e6f4; "
+            "border-radius:12px; font-size:15px; padding:8px;}"
         )
 
     def _text_style(self) -> str:
@@ -201,11 +207,15 @@ class MainWindow(QMainWindow):
             "border-radius:14px; font-size:15px; padding:10px;}"
         )
 
-    def _highlight_style(self, bg: str, fg: str, border: str) -> str:
-        return (
+    def _make_top_card(self, bg: str, fg: str, border: str) -> QTextEdit:
+        box = QTextEdit()
+        box.setReadOnly(True)
+        box.setMaximumHeight(100)
+        box.setStyleSheet(
             f"QTextEdit {{background:{bg}; color:{fg}; border:2px solid {border}; "
             "border-radius:14px; font-size:16px; padding:10px;}"
         )
+        return box
 
     def _wrap_section(self, title: str, widget: QTextEdit) -> QVBoxLayout:
         layout = QVBoxLayout()
@@ -221,7 +231,7 @@ class MainWindow(QMainWindow):
         label.setStyleSheet("font-size: 18px; font-weight: 700; color: #123b66;")
         box = QTextEdit()
         box.setReadOnly(True)
-        box.setMinimumHeight(170)
+        box.setMinimumHeight(165)
         box.setStyleSheet(self._card_style())
         layout.addWidget(label)
         layout.addWidget(box)
@@ -245,6 +255,9 @@ class MainWindow(QMainWindow):
         self.action_card["box"].setPlainText(result["action_text"])
         self.dependency_card["box"].setPlainText(result["dependency_text"])
         self.related_function_card["box"].setPlainText(result["related_function_text"])
+        self.linked_variable_card["box"].setPlainText(result["linked_variable_text"])
+        self.sync_check_card["box"].setPlainText(result["sync_check_text"])
+        self.call_context_card["box"].setPlainText(result["call_context_text"])
         self.impact_card["box"].setPlainText(result["impact_text"])
         self.steps_card["box"].setPlainText(result["reading_steps_text"])
         self.execution_card["box"].setPlainText(result["execution_chain_text"])
@@ -259,6 +272,9 @@ class MainWindow(QMainWindow):
             f"这段代码具体做了哪些动作：\n{result['action_text']}\n\n"
             f"这段代码依赖谁：\n{result['dependency_text']}\n\n"
             f"这段代码和模板里哪几个函数最相关：\n{result['related_function_text']}\n\n"
+            f"这段代码常和哪些变量一起联动：\n{result['linked_variable_text']}\n\n"
+            f"改完这里后还要同步检查哪几处：\n{result['sync_check_text']}\n\n"
+            f"这段代码大概会在哪里被调用：\n{result['call_context_text']}\n\n"
             f"改这里会影响哪里：\n{result['impact_text']}\n\n"
             f"建议按什么顺序看：\n{result['reading_steps_text']}\n\n"
             f"代码执行链：\n{result['execution_chain_text']}\n\n"
@@ -275,6 +291,9 @@ class MainWindow(QMainWindow):
         self.action_card["box"].clear()
         self.dependency_card["box"].clear()
         self.related_function_card["box"].clear()
+        self.linked_variable_card["box"].clear()
+        self.sync_check_card["box"].clear()
+        self.call_context_card["box"].clear()
         self.impact_card["box"].clear()
         self.steps_card["box"].clear()
         self.execution_card["box"].clear()

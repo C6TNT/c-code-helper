@@ -126,7 +126,7 @@ def build_term_explanations(features: dict) -> list[str]:
     if any(token in joined for token in ("u8", "u16", "u32")):
         result.append("u8 / u16 / u32：是单片机里常见的整数别名，可以理解成 8 位、16 位、32 位无符号整数。")
 
-    if any(token in joined for token in ("bit",)):
+    if "bit" in joined:
         result.append("bit：是 51 单片机里常见的位变量，通常只用来表示开关状态。")
 
     if "array" in keys:
@@ -291,6 +291,119 @@ def build_related_function_hints(features: dict, scene: str) -> list[str]:
         hints.append("参数相关代码通常和“显示参数”“保存参数”“加载参数”是联动的，建议三处一起串起来看。")
     elif "采样" in scene or "数据处理" in scene:
         hints.append("采样代码通常要和后面的显示页、报警判断或输出控制配合起来看，不然只看接口调用会觉得很空。")
+
+    return hints
+
+
+def build_linked_variable_hints(features: dict, scene: str) -> list[str]:
+    tags = set(features.get("semantic_tags", []))
+    variables = list(features.get("variables", []))
+    assignments = list(features.get("assignments", []))
+    linked = []
+
+    def add_items(items: list[str]) -> None:
+        for item in items:
+            if item and item not in linked:
+                linked.append(item)
+
+    add_items(assignments[:5])
+    add_items(variables[:6])
+
+    if "param_save" in tags or "param_load" in tags or "param_edit" in tags:
+        add_items(["g_param", "param_mode", "temp_limit_x10", "dist_limit", "adc_limit"])
+    if "page_switch" in tags or "display_output" in tags:
+        add_items(["g_page", "g_seg_buf", "page_mode"])
+    if "key_handle" in tags or "key_read" in tags:
+        add_items(["key", "g_page", "param_mode"])
+    if "temp_sample" in tags:
+        add_items(["g_data.temp10", "g_alarm", "g_param.temp_limit_x10"])
+    if "adc_sample" in tags:
+        add_items(["g_data.adc_value", "g_param.adc_limit"])
+    if "freq_sample" in tags:
+        add_items(["g_data.freq_hz", "freq_limit", "g_alarm"])
+    if "distance_sample" in tags:
+        add_items(["g_data.distance_cm", "g_param.dist_limit", "g_alarm"])
+    if "alarm_output" in tags:
+        add_items(["g_alarm", "led_state", "relay_state", "beep_state"])
+
+    if not linked:
+        return ["暂时没有识别到特别稳定的联动变量，建议先从当前函数里被修改的变量顺着往下追。"]
+
+    hints = [
+        f"这段代码常和这些变量一起联动：{_join_items(linked, 8)}。"
+    ]
+
+    if assignments:
+        hints.append("优先关注真正被赋值的变量，因为后面显示、判断、保存大概率都会围绕它们继续展开。")
+
+    return hints
+
+
+def build_sync_check_hints(features: dict, scene: str) -> list[str]:
+    tags = set(features.get("semantic_tags", []))
+    hints = []
+
+    if "param_save" in tags:
+        hints.append("改完后，记得同步检查参数读取逻辑、参数显示逻辑，以及 EEPROM 地址布局有没有一起更新。")
+    if "param_load" in tags:
+        hints.append("改完后，记得回头检查参数保存逻辑和默认参数初始化，避免读写格式不一致。")
+    if "param_edit" in tags:
+        hints.append("改完后，记得同步检查按键加减逻辑、参数页显示、保存函数三处。")
+    if "page_switch" in tags:
+        hints.append("改完后，记得同步检查页面枚举、按键切页分支、显示更新函数。")
+    if "display_output" in tags:
+        hints.append("改完后，记得同步检查显示位号、显示字符、前面的数据拆分和小数点位置。")
+    if "key_handle" in tags or "key_read" in tags:
+        hints.append("改完后，记得同步检查 key 值映射、模式切换状态、对应页面或参数分支。")
+    if "temp_sample" in tags or "adc_sample" in tags or "freq_sample" in tags or "distance_sample" in tags:
+        hints.append("改完后，记得同步检查实时显示页、报警判断和阈值参数是否都还在使用同一组变量。")
+    if "rtc_sample" in tags:
+        hints.append("改完后，记得同步检查时间显示页、整点控制或记录时间逻辑。")
+    if "alarm_output" in tags:
+        hints.append("改完后，记得同步检查 LED、继电器、蜂鸣器三类输出有没有一起对齐。")
+    if "eeprom_write" in tags or "eeprom_read" in tags:
+        hints.append("改完后，记得同步检查地址、拆分方式、还原方式，不要只改一边。")
+
+    if not hints:
+        if "页面" in scene:
+            hints.append("改完后，建议把页面编号、显示函数和切页入口三处一起回头看一遍。")
+        elif "按键" in scene:
+            hints.append("改完后，建议把按键值、分支目标和对应状态变量三处一起回头看。")
+        else:
+            hints.append("改完后，建议回头检查和它共用变量的显示、判断、保存三类位置。")
+
+    hints.append("最稳的做法是：改完先编译，再只验证和这段代码直接联动的那几处，不要一次改很多地方。")
+    return hints
+
+
+def build_call_context_hints(features: dict, scene: str) -> list[str]:
+    tags = set(features.get("semantic_tags", []))
+    hints = []
+
+    if "display_output" in tags:
+        hints.append("这段代码大概率会在页面显示更新链路里被调用，常见位置是 App_UpdateDisplay 或某个 App_ShowXXXPage。")
+    if "key_handle" in tags or "key_read" in tags:
+        hints.append("这段代码大概率会在按键处理链路里被调用，常见位置是 App_Loop 里的按键分发或 App_HandleKey。")
+    if "param_save" in tags:
+        hints.append("这段代码大概率会在参数确认、退出编辑模式、上电保存流程里被调用。")
+    if "param_load" in tags:
+        hints.append("这段代码大概率会在 App_Init 或上电初始化链路里被调用。")
+    if "temp_sample" in tags or "adc_sample" in tags or "freq_sample" in tags or "distance_sample" in tags:
+        hints.append("这段代码大概率会出现在周期任务里，比如 100ms、500ms 或 1s 的采样更新节拍。")
+    if "rtc_sample" in tags:
+        hints.append("这段代码大概率会在 1s 节拍任务或初始化时间读取逻辑里被调用。")
+    if "alarm_output" in tags:
+        hints.append("这段代码大概率会在状态刷新或报警输出更新函数里被调用。")
+
+    if not hints:
+        if "页面显示" in scene:
+            hints.append("这段代码大概率属于页面显示函数本体，或显示刷新链路的一部分。")
+        elif "按键处理" in scene:
+            hints.append("这段代码大概率属于主循环里的按键分发链路。")
+        elif "参数" in scene:
+            hints.append("这段代码大概率属于参数编辑、参数加载或参数保存链路。")
+        else:
+            hints.append("这段代码大概率属于某个页面函数、周期任务或业务状态更新函数的一部分。")
 
     return hints
 

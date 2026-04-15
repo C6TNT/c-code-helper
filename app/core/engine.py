@@ -1,13 +1,16 @@
 from app.core.classifier import classify_code_scene, map_scene_to_requirement
 from app.core.explainer import (
     build_code_explanation,
+    build_call_context_hints,
     build_dependency_hints,
     build_execution_chain,
     build_impact_hints,
+    build_linked_variable_hints,
     build_modify_hints,
     build_reading_steps,
     build_related_function_hints,
     build_specific_actions,
+    build_sync_check_hints,
     build_syntax_summary,
     build_term_explanations,
 )
@@ -28,6 +31,9 @@ def analyze_code(code_text: str) -> dict:
     specific_actions = build_specific_actions(features)
     dependency_hints = build_dependency_hints(features)
     related_function_hints = build_related_function_hints(features, scene)
+    linked_variable_hints = build_linked_variable_hints(features, scene)
+    sync_check_hints = build_sync_check_hints(features, scene)
+    call_context_hints = build_call_context_hints(features, scene)
     impact_hints = build_impact_hints(features, scene)
     execution_chain = build_execution_chain(features, scene)
     steps = build_reading_steps(features)
@@ -45,6 +51,9 @@ def analyze_code(code_text: str) -> dict:
         specific_actions,
         dependency_hints,
         related_function_hints,
+        linked_variable_hints,
+        sync_check_hints,
+        call_context_hints,
         impact_hints,
         execution_chain,
     )
