@@ -142,12 +142,14 @@ class MainWindow(QMainWindow):
         row4 = QHBoxLayout()
         row5 = QHBoxLayout()
         row6 = QHBoxLayout()
+        row7 = QHBoxLayout()
         right_layout.addLayout(row1)
         right_layout.addLayout(row2)
         right_layout.addLayout(row3)
         right_layout.addLayout(row4)
         right_layout.addLayout(row5)
         right_layout.addLayout(row6)
+        right_layout.addLayout(row7)
 
         self.syntax_card = self._make_card("这段代码用了什么语法")
         self.feature_card = self._make_card("这段代码里识别到了什么")
@@ -157,6 +159,7 @@ class MainWindow(QMainWindow):
         self.linked_variable_card = self._make_card("这段代码常和哪些变量一起联动")
         self.sync_check_card = self._make_card("改完这里后还要同步检查哪几处")
         self.call_context_card = self._make_card("这段代码大概会在哪里被调用")
+        self.file_link_card = self._make_card("这段代码更可能在哪些 .c/.h 文件里成套出现")
         self.impact_card = self._make_card("改这里会影响哪里")
         self.steps_card = self._make_card("建议按什么顺序看")
         self.execution_card = self._make_card("代码执行链")
@@ -171,11 +174,12 @@ class MainWindow(QMainWindow):
         row3.addLayout(self.linked_variable_card["layout"])
         row4.addLayout(self.sync_check_card["layout"])
         row4.addLayout(self.call_context_card["layout"])
+        row5.addLayout(self.file_link_card["layout"])
         row5.addLayout(self.impact_card["layout"])
-        row5.addLayout(self.steps_card["layout"])
+        row6.addLayout(self.steps_card["layout"])
         row6.addLayout(self.execution_card["layout"])
-        row6.addLayout(self.term_card["layout"])
-        row6.addLayout(self.modify_card["layout"])
+        row7.addLayout(self.term_card["layout"])
+        row7.addLayout(self.modify_card["layout"])
 
         self.load_sample_button.clicked.connect(self.handle_load_sample)
         self.analyze_button.clicked.connect(self.handle_analyze)
@@ -258,6 +262,7 @@ class MainWindow(QMainWindow):
         self.linked_variable_card["box"].setPlainText(result["linked_variable_text"])
         self.sync_check_card["box"].setPlainText(result["sync_check_text"])
         self.call_context_card["box"].setPlainText(result["call_context_text"])
+        self.file_link_card["box"].setPlainText(result["file_link_text"])
         self.impact_card["box"].setPlainText(result["impact_text"])
         self.steps_card["box"].setPlainText(result["reading_steps_text"])
         self.execution_card["box"].setPlainText(result["execution_chain_text"])
@@ -275,6 +280,7 @@ class MainWindow(QMainWindow):
             f"这段代码常和哪些变量一起联动：\n{result['linked_variable_text']}\n\n"
             f"改完这里后还要同步检查哪几处：\n{result['sync_check_text']}\n\n"
             f"这段代码大概会在哪里被调用：\n{result['call_context_text']}\n\n"
+            f"这段代码更可能在哪些 .c/.h 文件里成套出现：\n{result['file_link_text']}\n\n"
             f"改这里会影响哪里：\n{result['impact_text']}\n\n"
             f"建议按什么顺序看：\n{result['reading_steps_text']}\n\n"
             f"代码执行链：\n{result['execution_chain_text']}\n\n"
@@ -294,6 +300,7 @@ class MainWindow(QMainWindow):
         self.linked_variable_card["box"].clear()
         self.sync_check_card["box"].clear()
         self.call_context_card["box"].clear()
+        self.file_link_card["box"].clear()
         self.impact_card["box"].clear()
         self.steps_card["box"].clear()
         self.execution_card["box"].clear()

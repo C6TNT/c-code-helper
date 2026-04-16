@@ -25,6 +25,7 @@ def format_result(
     linked_variable_hints: list[str],
     sync_check_hints: list[str],
     call_context_hints: list[str],
+    file_link_hints: list[str],
     impact_hints: list[str],
     execution_chain: list[str],
 ) -> dict:
@@ -40,6 +41,7 @@ def format_result(
         "linked_variable_text": _bullet_join(linked_variable_hints),
         "sync_check_text": _bullet_join(sync_check_hints),
         "call_context_text": _bullet_join(call_context_hints),
+        "file_link_text": _bullet_join(file_link_hints),
         "impact_text": _bullet_join(impact_hints),
         "execution_chain_text": _number_join(execution_chain),
         "reading_steps_text": _number_join(steps),

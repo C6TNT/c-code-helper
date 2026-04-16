@@ -4,6 +4,7 @@ from app.core.explainer import (
     build_call_context_hints,
     build_dependency_hints,
     build_execution_chain,
+    build_file_link_hints,
     build_impact_hints,
     build_linked_variable_hints,
     build_modify_hints,
@@ -34,6 +35,7 @@ def analyze_code(code_text: str) -> dict:
     linked_variable_hints = build_linked_variable_hints(features, scene)
     sync_check_hints = build_sync_check_hints(features, scene)
     call_context_hints = build_call_context_hints(features, scene)
+    file_link_hints = build_file_link_hints(features, scene)
     impact_hints = build_impact_hints(features, scene)
     execution_chain = build_execution_chain(features, scene)
     steps = build_reading_steps(features)
@@ -54,6 +56,7 @@ def analyze_code(code_text: str) -> dict:
         linked_variable_hints,
         sync_check_hints,
         call_context_hints,
+        file_link_hints,
         impact_hints,
         execution_chain,
     )

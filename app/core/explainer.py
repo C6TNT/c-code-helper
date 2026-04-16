@@ -408,6 +408,46 @@ def build_call_context_hints(features: dict, scene: str) -> list[str]:
     return hints
 
 
+def build_file_link_hints(features: dict, scene: str) -> list[str]:
+    tags = set(features.get("semantic_tags", []))
+    calls = set(features.get("calls", []))
+    hints = []
+
+    if "display_output" in tags:
+        hints.append("这段代码更可能成套出现在 App/app.c 里的页面显示函数附近，也常和 BSP/bsp_seg.c、BSP/bsp_seg.h 一起看。")
+    if "key_handle" in tags or "key_read" in tags:
+        hints.append("这段代码更可能成套出现在 App/app.c 的按键分发逻辑里，往下顺着看时通常还要配合 BSP/bsp_key.c、BSP/bsp_key.h。")
+    if "param_save" in tags or "param_load" in tags or "eeprom_write" in tags or "eeprom_read" in tags:
+        hints.append("这段代码更可能成套出现在 App/app.c 的参数区，同时要联动看 Devices/dev_at24c02.c、Devices/dev_at24c02.h。")
+    if "temp_sample" in tags:
+        hints.append("这段代码更可能成套出现在 App/app.c 的采样更新区，同时要顺着看 Devices/dev_ds18b20.c、Drivers/drv_onewire.c。")
+    if "adc_sample" in tags:
+        hints.append("这段代码更可能成套出现在 App/app.c 的实时数据更新区，同时要联动看 Devices/dev_pcf8591.c、Drivers/drv_iic.c。")
+    if "freq_sample" in tags:
+        hints.append("这段代码更可能成套出现在 App/app.c 的频率数据处理区，同时要联动看 Devices/dev_freq_counter.c。")
+    if "distance_sample" in tags:
+        hints.append("这段代码更可能成套出现在 App/app.c 的距离采样或报警判断区，同时要联动看 Devices/dev_ultrasonic.c。")
+    if "rtc_sample" in tags:
+        hints.append("这段代码更可能成套出现在 App/app.c 的时间页或初始化区，同时要联动看 Devices/dev_ds1302.c、Drivers/drv_ds1302.c。")
+    if "alarm_output" in tags:
+        hints.append("这段代码更可能成套出现在 App/app.c 的状态输出区，同时还要看 BSP/bsp_led.c、BSP/bsp_beep_relay.c。")
+    if "UART_SendString" in calls or "UART_SendByte" in calls:
+        hints.append("这段代码更可能成套出现在 App/app.c 的串口输出区，同时要联动看 BSP/bsp_uart.c、BSP/bsp_uart.h。")
+
+    if not hints:
+        if "页面显示" in scene:
+            hints.append("这段代码大概率还是在 App/app.c 的页面显示函数附近，必要时再顺着看 BSP 层显示接口。")
+        elif "按键处理" in scene:
+            hints.append("这段代码大概率在 App/app.c 的按键处理区，必要时再顺着看 BSP/bsp_key.c、BSP/bsp_key.h。")
+        elif "参数" in scene:
+            hints.append("这段代码大概率在 App/app.c 的参数区，必要时再联动看保存/读取对应的 Devices 层文件。")
+        else:
+            hints.append("这段代码大概率先在 App/app.c 找上下文，再根据调用的接口名决定要不要往 BSP、Devices、Drivers 层继续追。")
+
+    hints.append("最稳的阅读顺序是：先看 App 层这段代码在业务里干什么，再顺着它调用到的 BSP/Devices/Drivers 文件往下追。")
+    return hints
+
+
 def build_impact_hints(features: dict, scene: str) -> list[str]:
     tags = set(features.get("semantic_tags", []))
     impacts = []
